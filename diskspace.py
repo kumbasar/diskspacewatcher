@@ -45,4 +45,11 @@ if body:
             s.send_message(msg)
         os.mknod(FILENAME)
 elif os.path.exists(FILENAME):
-        os.remove(FILENAME)
+    print('Clear flag.')
+    msg = MIMEText('Low disk space fixed.\n')
+    msg['Subject'] = '[DiskSpaceWatcher] Low disk space fixed @' + ip
+    msg['From'] = FROM
+    msg['To'] = TO
+    with smtplib.SMTP(SMTP_IP) as s:
+        s.send_message(msg)    
+    os.remove(FILENAME)
