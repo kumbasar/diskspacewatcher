@@ -1,18 +1,18 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import subprocess
 import smtplib
 import socket
-import os
 from email.mime.text import MIMEText
+import shutil
+import os
 
 #Sample SMTP configuration
 SMTP_IP = 'smtp.example.com'
 TO = 'root@example.com'
 FROM = 'admin@example.com'
-
 THRESHOLD = 90
 FILENAME = '/tmp/diskspacewatcher'
+disks = ["/", "/home"]
 
 body = ''
 
@@ -22,22 +22,19 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     ip = str(s.getsockname()[0])
 print("Server: " + ip)
 
-df = subprocess.Popen(["df","-h"], stdout=subprocess.PIPE)
-
-for line in df.stdout:
-     splitline = line.decode().split()
-     # Check "/" and "/home" spaces
-     if splitline[5] == "/" or splitline[5] == "/home":
-         if float(splitline[4][:-1]) >= THRESHOLD:
-             body += ('Uses: '+ str(splitline[5]) + ' => ' + str(splitline[4][:-1]) + '%\n')
-             print(body)
+for disk in disks:
+    du = shutil.disk_usage(disk)
+    usage = (du.used/du.total)*100
+    if usage >= THRESHOLD:
+        body += "{} disk usage: {:0.2f}".format(disk, usage)
+        print(body)
 
 if body:
     if os.path.exists(FILENAME):
         print('Notification email already sent.')
     else:
         print('Posting notification')
-        msg = MIMEText( body + '\n')
+        msg = MIMEText(body + '\n')
         msg['Subject'] = '[DiskSpaceWatcher] Low disk space @' + ip
         msg['From'] = FROM
         msg['To'] = TO
@@ -51,5 +48,5 @@ elif os.path.exists(FILENAME):
     msg['From'] = FROM
     msg['To'] = TO
     with smtplib.SMTP(SMTP_IP) as s:
-        s.send_message(msg)    
+        s.send_message(msg)
     os.remove(FILENAME)
